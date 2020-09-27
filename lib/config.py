@@ -19,7 +19,7 @@ __C.CONST.RNG_SEED = 0
 __C.CONST.IMG_W = 127
 __C.CONST.IMG_H = 127
 __C.CONST.N_VOX = 32
-__C.CONST.N_VIEWS = 5
+__C.CONST.N_VIEWS = 1 #5
 __C.CONST.BATCH_SIZE = 36
 __C.CONST.NETWORK_CLASS = 'ResidualGRUNet'
 __C.CONST.WEIGHTS = ''  # when set, load the weights from the file
@@ -99,6 +99,13 @@ __C.TEST.NO_BG_COLOR_RANGE = [[240, 240], [240, 240], [240, 240]]
 
 __C.TEST.VISUALIZE = False
 __C.TEST.VOXEL_THRESH = [0.4]
+
+# HYPERNET PARAMS
+__C.CONST.vqvae_dict_size = 100
+__C.CONST.dynamic_hypernet_probability_thresh = 0.05
+__C.CONST.hyptotal_instances = 739  #number of embeddings to create
+__C.CONST.hypernet_nonlinear = True
+__C.CONST.use_resnet_for_hypernet = True
 
 
 def _merge_a_into_b(a, b):

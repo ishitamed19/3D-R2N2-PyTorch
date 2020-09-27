@@ -1,0 +1,1 @@
+tensorboard --logdir=./tb_output --port=$1
