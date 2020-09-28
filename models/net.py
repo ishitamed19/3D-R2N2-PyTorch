@@ -1,9 +1,9 @@
 import numpy as np
 import datetime as dt
-
+import os
 from lib.config import cfg
 from lib.utils import weight_init
-
+from tensorboardX import SummaryWriter
 import torch.nn as nn
 
 
@@ -21,6 +21,7 @@ class Net(nn.Module):
         self.img_w = cfg.CONST.IMG_W
         self.img_h = cfg.CONST.IMG_H
         self.n_vox = cfg.CONST.N_VOX
+        self.tb_logger = SummaryWriter(os.path.join(cfg.DIR.TB_PATH))
 
         # (self.batch_size, 3, self.img_h, self.img_w),
         # override x and is_x_tensor4 when using multi-view network

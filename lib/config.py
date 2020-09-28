@@ -34,6 +34,7 @@ __C.DIR.MODEL_PATH = './ShapeNet/ShapeNetCore.v1/%s/%s/model.obj'
 __C.DIR.VOXEL_PATH = './ShapeNet/ShapeNetVox32/%s/%s/model.binvox'
 __C.DIR.RENDERING_PATH = './ShapeNet/ShapeNetRendering/%s/%s/rendering'
 __C.DIR.OUT_PATH = './output/default'
+__C.DIR.TB_PATH = './tb_output/default'
 
 #
 # Training
@@ -102,7 +103,7 @@ __C.TEST.VOXEL_THRESH = [0.4]
 
 # HYPERNET PARAMS
 __C.CONST.vqvae_dict_size = 100
-__C.CONST.dynamic_hypernet_probability_thresh = 0.05
+__C.CONST.dynamic_hypernet_probability_thresh = 0.2
 __C.CONST.hyptotal_instances = 739  #number of embeddings to create
 __C.CONST.hypernet_nonlinear = True
 __C.CONST.use_resnet_for_hypernet = True

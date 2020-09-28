@@ -130,6 +130,7 @@ class Solver(object):
             # Print status, run validation, check divergence, and save model.
             if train_ind % cfg.TRAIN.PRINT_FREQ == 0:
                 # Print the current loss
+                self.net.tb_logger.add_scalar('Train loss',loss, train_ind)
                 print('%s Iter: %d Loss: %f' % (datetime.now(), train_ind, loss))
 
             if train_ind % cfg.TRAIN.VALIDATION_FREQ == 0 and val_loader is not None:
@@ -143,6 +144,7 @@ class Solver(object):
                     val_loss = self.train_loss(batch_img, batch_voxel)
                     val_losses += val_loss
                 var_losses_mean = val_losses / val_num_iter
+                self.net.tb_logger.add_scalar('Val loss',var_losses_mean, train_ind)
                 print('%s Test loss: %f' % (datetime.now(), var_losses_mean))
 
             if train_ind % cfg.TRAIN.NAN_CHECK_FREQ == 0:

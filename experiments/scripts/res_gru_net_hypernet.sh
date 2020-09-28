@@ -5,7 +5,7 @@ set -e
 
 export PYTHONUNBUFFERED="True"
 
-NET_NAME=ResidualGRUNet
+NET_NAME=ResidualGRUNetHypernet
 EXP_DETAIL=default_model
 OUT_PATH='./output/'$NET_NAME/$EXP_DETAIL
 TB_PATH='./tb_output/'$NET_NAME/$EXP_DETAIL

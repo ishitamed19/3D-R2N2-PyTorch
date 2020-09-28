@@ -1,8 +1,8 @@
-from models.gru_net import GRUNet
-#from models.res_gru_net import ResidualGRUNet
-from models.res_gru_net_hypernet import ResidualGRUNet
+# from models.gru_net import GRUNet
+# from models.res_gru_net import ResidualGRUNet
+from models.res_gru_net_hypernet import ResidualGRUNetHypernet
 
-MODELS = (GRUNet, ResidualGRUNet)
+MODELS = (ResidualGRUNetHypernet)
 
 
 def get_models():

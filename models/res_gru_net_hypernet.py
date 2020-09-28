@@ -1,6 +1,6 @@
 import numpy as np
 
-from models.base_gru_net import BaseGRUNet
+from models.base_gru_net import BaseGRUNetHypernet
 from lib.layers import SoftmaxWithLoss3D
 
 import torch
@@ -52,10 +52,10 @@ class FCConv3DLayer_torch(nn.Module):
 #                      GRUNet definition using PyTorch                                   #
 #                                                                                        #
 ##########################################################################################
-class ResidualGRUNet(BaseGRUNet):
+class ResidualGRUNetHypernet(BaseGRUNetHypernet):
     def __init__(self):
-        print("\ninitializing \"ResidualGRUNet\"")
-        super(ResidualGRUNet, self).__init__()
+        print("\ninitializing \"ResidualGRUNetHypernet\"")
+        super(ResidualGRUNetHypernet, self).__init__()
         """
         Set the necessary data of the network
         """
@@ -185,7 +185,7 @@ class encoder(nn.Module):
         rect5a = self.leaky_relu(conv5a)
         conv5b = F.conv2d(rect5a, conv5b_wt, bias=conv5b_bias, padding=1) #self.conv5b(rect5a)
         rect5 = self.leaky_relu(conv5b)
-        conv5c = F.conv2d(pool34, conv5c_wt, bias=conv5c_bias) #self.conv5c(pool4)
+        conv5c = F.conv2d(pool4, conv5c_wt, bias=conv5c_bias) #self.conv5c(pool4)
         res5 = conv5c + rect5
         pool5 = self.pool(res5)
         

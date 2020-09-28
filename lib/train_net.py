@@ -3,6 +3,7 @@ import inspect
 from multiprocessing import Queue
 
 from torch.utils.data import DataLoader
+from tensorboardX import SummaryWriter
 
 # Training related functions
 from models import load_model
@@ -36,7 +37,7 @@ def train_net():
     '''Main training function'''
     # Set up the model and the solver
     NetClass = load_model(cfg.CONST.NETWORK_CLASS)
-
+    
     net = NetClass()
     print('\nNetwork definition: ')
     print(net)

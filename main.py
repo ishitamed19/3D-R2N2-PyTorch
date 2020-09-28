@@ -59,6 +59,7 @@ def parse_args():
     parser.add_argument(
         '--weights', dest='weights', help='Initialize network from the weights file', default=None)
     parser.add_argument('--out', dest='out_path', help='set output path', default=cfg.DIR.OUT_PATH)
+    parser.add_argument('--tb', dest='tb_path', help='set tensorboard log path', default='./tb_output/')
     parser.add_argument(
         '--init-iter',
         dest='init_iter',
@@ -100,6 +101,8 @@ def main():
         cfg_from_list(['TEST.EXP_NAME', args.exp])
     if args.out_path is not None:
         cfg_from_list(['DIR.OUT_PATH', args.out_path])
+    if args.tb_path is not None:
+        cfg_from_list(['DIR.TB_PATH', args.tb_path])
     if args.weights is not None:
         cfg_from_list(['CONST.WEIGHTS', args.weights, 'TRAIN.RESUME_TRAIN', True,
                        'TRAIN.INITIAL_ITERATION', int(args.init_iter)])
