@@ -26,6 +26,7 @@ class Net(nn.Module):
         # (self.batch_size, 3, self.img_h, self.img_w),
         # override x and is_x_tensor4 when using multi-view network
         self.is_x_tensor4 = True
+        self.rng = np.random.RandomState(seed=42)
 
     def parameter_init(self):
         #initialize all the parameters of the gru net
@@ -41,7 +42,7 @@ class Net(nn.Module):
                     """
                     print("Initing...",name)
                     w_shape = (m.out_channels, m.in_channels, *m.kernel_size)
-                    m.weight.data = weight_init(w_shape)
+                    m.weight.data = weight_init(w_shape,rng=self.rng)
                     if m.bias is not None:
                         m.bias.data.fill_(0.1)
                         
@@ -51,7 +52,7 @@ class Net(nn.Module):
                     """
                     print("Initing...",name)
                     w_shape = (m.out_features, m.in_features)
-                    m.weight.data = weight_init(w_shape)
+                    m.weight.data = weight_init(w_shape,rng=self.rng)
                     if m.bias is not None:
                         m.bias.data.fill_(0.1)
         else:

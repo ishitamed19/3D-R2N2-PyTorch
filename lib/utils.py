@@ -2,8 +2,6 @@ import numpy as np
 import collections
 import torch
 
-np.random.seed(42)
-
 #utility function to check nan
 def has_nan(x):
     """
@@ -15,8 +13,9 @@ def has_nan(x):
     return (x != x).any()
 
 #utility function to customize weight initialization
-def weight_init(w_shape, mean=0, std=0.01, filler='msra'):
-    rng = np.random.RandomState(seed=42)
+
+def weight_init(w_shape, mean=0, std=0.01, filler='msra',rng=None):
+    
     if isinstance(w_shape, collections.Iterable):
         if len(w_shape) > 1 and len(w_shape) < 5:
             fan_in = np.prod(w_shape[1:])

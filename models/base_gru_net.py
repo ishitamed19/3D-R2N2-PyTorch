@@ -194,6 +194,9 @@ class BaseGRUNetHypernet(Net):
                 
             # Visualize weights on TB
 #             if global_step<=20:
+#                 self.tb_logger.add_histogram('resnet_embedding', self.hypernet.encodingnet(x), global_step)
+#                 self.tb_logger.add_histogram('vqvae_embedding', self.hypernet.embedding.weight, global_step)
+                
 #                 for i, name in enumerate(self.hypernet.enc_conv_names):
 #                     self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_conv[i], global_step)
 #                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_conv[i], global_step)
@@ -290,12 +293,12 @@ class HyperNet(nn.Module):
         # st()
 
         if use_resnet_for_hypernet:
-            variance = 0.2
+            variance = 0.075
             lambda_val = 0.5
             min_embed = -0.35
             max_embed = 0.6
         else:
-            variance = 0.2
+            variance = 0.075
             min_embed = -0.25
             max_embed = 0.25                               
 
@@ -304,7 +307,7 @@ class HyperNet(nn.Module):
         
         self.encodingnet = ResnetEncoder()
         self.embedding = nn.Embedding(vqvae_dict_size, self.emb_dimension)
-        nn.init.normal_(self.embedding.weight, mean=0, std=1.55)
+        nn.init.normal_(self.embedding.weight, mean=0.5, std=1.75)
         self.prototype_usage = torch.zeros(vqvae_dict_size).cuda()
 
         if hypernet_nonlinear:
@@ -317,11 +320,11 @@ class HyperNet(nn.Module):
 
         # Dummy values for occ and rgbnet hypernet testing
         
-        weight_variances_conv_enc = [0.0287/10, 0.0481/10, 0.044/10, 0.0416/10, 0.1336/10, 0.0340/10, 0.0294/10, 0.1020/10, 0.0294/10, 0.0294/10, 0.0294/10, 0.0294/10, 0.0883/10, 0.0294/10, 0.0294/10]
-        weight_variances_fc_enc = [0.03466/10]
-        weight_variances_3dgru_enc = [0.0208/10, 0.0051/10, 0.0208/10, 0.0051/10, 0.0208/10, 0.0051/10]
+        weight_variances_conv_enc = [0.0287/20, 0.0481/20, 0.044/20, 0.0416/20, 0.1336/20, 0.0340/20, 0.0294/20, 0.1020/20, 0.0294/20, 0.0294/20, 0.0294/20, 0.0294/20, 0.0883/20, 0.0294/20, 0.0294/20]
+        weight_variances_fc_enc = [0.03466/20]
+        weight_variances_3dgru_enc = [0.0208/20, 0.0051/20, 0.0208/20, 0.0051/20, 0.0208/20, 0.0051/20]
         
-        weight_variances_conv_dec = [0.00514/10, 0.00514/10, 0.00514/10, 0.00514/10, 0.00719/10, 0.01018/10, 0.02192/10, 0.0140/10, 0.01992/10, 0.0199/10, 0.0527/10]
+        weight_variances_conv_dec = [0.00514/20, 0.00514/20, 0.00514/20, 0.00514/20, 0.00719/20, 0.01018/20, 0.02192/20, 0.0140/20, 0.01992/20, 0.0199/20, 0.0527/20]
 
         
         self.kernel_conv_encoderWeights = nn.ParameterList([Parameter(torch.nn.init.normal_(torch.empty(self.emb_dimension, self.total(i)), mean=0, std=(variance*weight_variances_conv_enc[index])/((variance**2-weight_variances_conv_enc[index]**2)**0.5)),requires_grad=True) for index,i in enumerate(self.enc_conv_wts_size)])
@@ -387,6 +390,7 @@ class HyperNet(nn.Module):
                         self.update_embedding_dynamically()
 
         embed = self.encodingnet(rgb)
+        #print(embed.mean(), embed.std())
 
         embed_shape = embed.shape 
 
