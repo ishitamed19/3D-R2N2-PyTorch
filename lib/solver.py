@@ -49,7 +49,7 @@ class Solver(object):
         else:
             sys.exit('Error: Unimplemented optimization policy')
 
-    def train_loss(self, x, y):
+    def train_loss(self, x, y, global_step):
         """
         y is provided and test is False, only the loss will be returned.
 
@@ -62,7 +62,7 @@ class Solver(object):
             x = x.cuda()
             y = y.cuda()
             
-        loss = self.net(x, y, test=False)
+        loss = self.net(x, y,global_step,test=False)
         
         #compute gradient and do parameter update step
         self.optimizer.zero_grad()
@@ -114,7 +114,7 @@ class Solver(object):
 
             # Apply one gradient step
             train_timer.tic()
-            loss = self.train_loss(batch_img, batch_voxel)
+            loss = self.train_loss(x=batch_img, y=batch_voxel,global_step=train_ind)
             train_timer.toc()
 
             training_losses.append(loss.item())
@@ -133,19 +133,19 @@ class Solver(object):
                 self.net.tb_logger.add_scalar('Train loss',loss, train_ind)
                 print('%s Iter: %d Loss: %f' % (datetime.now(), train_ind, loss))
 
-            if train_ind % cfg.TRAIN.VALIDATION_FREQ == 0 and val_loader is not None:
-                # Print test loss and params to check convergence every N iterations
+            if train_ind>1 and train_ind % cfg.TRAIN.VALIDATION_FREQ == 0 and val_loader is not None:
+                #Print test loss and params to check convergence every N iterations
 
                 val_losses = 0
                 val_num_iter = min(cfg.TRAIN.NUM_VALIDATION_ITERATIONS, len(val_loader))
                 val_loader_iter = iter(val_loader)
                 for i in range(val_num_iter):
                     batch_img, batch_voxel = val_loader_iter.next()
-                    val_loss = self.train_loss(batch_img, batch_voxel)
+                    val_loss = self.train_loss(batch_img, batch_voxel,-1)
                     val_losses += val_loss
                 var_losses_mean = val_losses / val_num_iter
                 self.net.tb_logger.add_scalar('Val loss',var_losses_mean, train_ind)
-                print('%s Test loss: %f' % (datetime.now(), var_losses_mean))
+                print('%s Val loss: %f' % (datetime.now(), var_losses_mean))
 
             if train_ind % cfg.TRAIN.NAN_CHECK_FREQ == 0:
                 # Check that the network parameters are all valid
@@ -161,8 +161,8 @@ class Solver(object):
 
             #loss is a Variable containing torch.FloatTensor of size 1
             if loss.item() > cfg.TRAIN.LOSS_LIMIT:
-                print("Cost exceeds the threshold. Stop training")
-                break
+                print("Cost exceeds the threshold. Stop training",loss.item())
+                #break
 
     def save(self, training_losses, save_dir, step):
         ''' Save the current network parameters to the save_dir and make a
@@ -225,7 +225,7 @@ class Solver(object):
                 y = y.cuda()
         
         # Parse the result
-        results = self.net(x, y, test=True)
+        results = self.net(x, y, global_step=-1, test=True)
         prediction = results[0]
         loss = results[1]
         activations = results[2:]

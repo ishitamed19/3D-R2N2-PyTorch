@@ -10,7 +10,7 @@ cfg = __C
 #
 __C.SUB_CONFIG_FILE = []
 __C.DATASET = './experiments/dataset/shapenet_1000.json'  # yaml/json file that specifies a dataset (training/testing)
-__C.NET_NAME = 'res_gru_net'
+__C.NET_NAME = 'res_gru_net_hypernet'
 __C.PROFILE = False
 
 __C.CONST = edict()
@@ -21,7 +21,7 @@ __C.CONST.IMG_H = 127
 __C.CONST.N_VOX = 32
 __C.CONST.N_VIEWS = 1 #5
 __C.CONST.BATCH_SIZE = 36
-__C.CONST.NETWORK_CLASS = 'ResidualGRUNet'
+__C.CONST.NETWORK_CLASS = 'ResidualGRUNetHypernet'
 __C.CONST.WEIGHTS = ''  # when set, load the weights from the file
 
 #
@@ -57,7 +57,7 @@ __C.TRAIN.VALIDATION_FREQ = 2000
 __C.TRAIN.NAN_CHECK_FREQ = 2000
 __C.TRAIN.RANDOM_NUM_VIEWS = True  # feed in random # views if n_views > 1
 
-__C.QUEUE_SIZE = 15  # maximum number of minibatches that can be put in a data queue
+__C.QUEUE_SIZE = 10 #15  # maximum number of minibatches that can be put in a data queue
 
 # Data augmentation
 __C.TRAIN.RANDOM_CROP = True
@@ -75,15 +75,15 @@ __C.TRAIN.SIMPLE_BACKGROUND_RATIO = 0.5  # ratio of the simple backgrounded imag
 __C.TRAIN.DEFAULT_LEARNING_RATE = 1e-4
 __C.TRAIN.POLICY = 'adam'  # def: sgd, adam
 # The EasyDict can't use dict with integers as keys
-__C.TRAIN.LEARNING_RATES = {'20000': 1e-5, '60000': 1e-6}
+__C.TRAIN.LEARNING_RATES = {'50000': 1e-5, '150000': 5e-6}
 __C.TRAIN.MOMENTUM = 0.90
 # weight decay or regularization constant. If not set, the loss can diverge
 # after the training almost converged since weight can increase indefinitely
 # (for cross entropy loss). Too high regularization will also hinder training.
 __C.TRAIN.WEIGHT_DECAY = 0.00005
-__C.TRAIN.LOSS_LIMIT = 2  # stop training if the loss exceeds the limit
+__C.TRAIN.LOSS_LIMIT = 1000 #2  # stop training if the loss exceeds the limit
 __C.TRAIN.SAVE_FREQ = 10000  # weights will be overwritten every save_freq
-__C.TRAIN.PRINT_FREQ = 40
+__C.TRAIN.PRINT_FREQ = 100 #40
 
 #
 # Testing options
@@ -107,6 +107,7 @@ __C.CONST.dynamic_hypernet_probability_thresh = 0.2
 __C.CONST.hyptotal_instances = 739  #number of embeddings to create
 __C.CONST.hypernet_nonlinear = True
 __C.CONST.use_resnet_for_hypernet = True
+__C.CONST.dynamic_dict = True
 
 
 def _merge_a_into_b(a, b):

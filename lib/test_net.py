@@ -100,10 +100,19 @@ def test_net():
         results['cost'][batch_idx] = float(loss)
         print('%d/%d, costs: %f, mAP: %f' %
                 (batch_idx, num_batch, loss, np.mean(results['mAP'][batch_idx])))
+        
+        solver.net.tb_logger.add_scalar('Test loss',loss, batch_idx)
+        solver.net.tb_logger.add_scalar('Test mIOU',np.mean(results['mAP'][batch_idx]), batch_idx)
+        
+        #send to tensorboard
+        
         batch_idx += 1
 
 
     print('Total loss: %f' % np.mean(results['cost']))
     print('Total mAP: %f' % np.mean(results['mAP']))
+    
+    solver.net.tb_logger.add_scalar('Test Total loss',np.mean(results['cost']), 0)
+    solver.net.tb_logger.add_scalar('Test Total mIOU',np.mean(results['mAP']), 0)
 
     # sio.savemat(result_fn, results)

@@ -16,6 +16,15 @@ from lib.config import cfg, cfg_from_file, cfg_from_list
 from lib.test_net import test_net
 from lib.train_net import train_net
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Main 3Deverything train/test file')
@@ -45,6 +54,18 @@ def parse_args():
         help='name of the net',
         default=cfg.CONST.BATCH_SIZE,
         type=int)
+    parser.add_argument(
+        '--lr',
+        dest='learn_rate',
+        help='learning rate of the net',
+        default=cfg.TRAIN.DEFAULT_LEARNING_RATE,
+        type=float)
+    parser.add_argument(
+        '--dict',
+        dest='dyna_dict',
+        help='dynamic dict',
+        default=False,
+        type=str2bool)
     parser.add_argument(
         '--iter',
         dest='iter',
@@ -103,6 +124,10 @@ def main():
         cfg_from_list(['DIR.OUT_PATH', args.out_path])
     if args.tb_path is not None:
         cfg_from_list(['DIR.TB_PATH', args.tb_path])
+    if args.dyna_dict is not None:
+        cfg_from_list(['CONST.dynamic_dict', args.dyna_dict])
+    if args.learn_rate is not None:
+        cfg_from_list(['TRAIN.DEFAULT_LEARNING_RATE', args.learn_rate])
     if args.weights is not None:
         cfg_from_list(['CONST.WEIGHTS', args.weights, 'TRAIN.RESUME_TRAIN', True,
                        'TRAIN.INITIAL_ITERATION', int(args.init_iter)])

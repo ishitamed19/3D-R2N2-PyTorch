@@ -6,7 +6,7 @@ set -e
 export PYTHONUNBUFFERED="True"
 
 NET_NAME=ResidualGRUNetHypernet
-EXP_DETAIL=default_model
+EXP_DETAIL=notdyna_lr5
 OUT_PATH='./output/'$NET_NAME/$EXP_DETAIL
 TB_PATH='./tb_output/'$NET_NAME/$EXP_DETAIL
 LOG="$OUT_PATH/log.`date +'%Y-%m-%d_%H-%M-%S'`"
@@ -18,17 +18,20 @@ exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
 python3 main.py \
-      --batch-size 20 \
-      --iter 60000 \
+      --batch-size 1 \
+      --iter 200000 \
+      --lr 5e-5 \
+      --dict False \
       --out $OUT_PATH \
       --model $NET_NAME \
-      --tb $TB_PATH \
+      --tb $TB_PATH/'train' \
       ${*:1}
 
-python3 main.py \
-      --test \
-      --batch-size 1 \
-      --out $OUT_PATH \
-      --weights $OUT_PATH/checkpoint.pth \
-      --model $NET_NAME \
-      ${*:1}
+# python3 main.py \
+#       --test \
+#       --batch-size 1 \
+#       --out $OUT_PATH \
+# #       --weights $OUT_PATH/checkpoint.pth \
+#       --model $NET_NAME \
+#       --tb $TB_PATH/'test' \
+#       ${*:1}

@@ -30,7 +30,7 @@ class Net(nn.Module):
     def parameter_init(self):
         #initialize all the parameters of the gru net
         if hasattr(self, "encoder") and hasattr(self, "decoder"):
-            for m in self.modules():
+            for name,m in self.named_modules():
                 
                 if isinstance(m, (nn.Conv2d, nn.Conv3d)):
                     """
@@ -39,6 +39,7 @@ class Net(nn.Module):
                     For Conv3d, the shape of the weight is 
                     (out_channels, in_channels, kernel_size[0], kernel_size[1], kernel_size[2]).
                     """
+                    print("Initing...",name)
                     w_shape = (m.out_channels, m.in_channels, *m.kernel_size)
                     m.weight.data = weight_init(w_shape)
                     if m.bias is not None:
@@ -48,6 +49,7 @@ class Net(nn.Module):
                     """
                     For Linear module, the shape of the weight is (out_features, in_features)
                     """
+                    print("Initing...",name)
                     w_shape = (m.out_features, m.in_features)
                     m.weight.data = weight_init(w_shape)
                     if m.bias is not None:
@@ -55,5 +57,5 @@ class Net(nn.Module):
         else:
             raise Exception("The network must have an encoder and a decoder before initializing all the parameters")
                 
-    def forward(self, x, y=None):
+    def forward(self, x, y=None, global_step=None):
         raise NotImplementedError("Define a forward pass")

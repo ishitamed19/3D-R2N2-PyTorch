@@ -63,7 +63,7 @@ class BaseGRUNet(Net):
         self.decoder = None
         
         
-    def forward(self, x, y=None, test=True):
+    def forward(self, x, y=None, global_step=0, test=True):
         #ensure that the network has encoder and decoder attributes
         if self.encoder is None:
             raise Exception("subclass network of BaseGRUNet must define the \"encoder\" attribute")
@@ -73,6 +73,10 @@ class BaseGRUNet(Net):
         #initialize the hidden state and update gate
         h = self.initHidden(self.h_shape)
         u = self.initHidden(self.h_shape)
+        
+        # since we are training for single view and batch
+        x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
+        y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
         
         #a list used to store intermediate update gate activations
         u_list = []
@@ -84,7 +88,7 @@ class BaseGRUNet(Net):
         """
             
         for time in range(x.size(0)):
-            gru_out, update_gate = self.encoder(x[time], h, u, time)
+            gru_out, update_gate = self.encoder(x, h, u, time)
 
             h = gru_out
 
@@ -153,7 +157,7 @@ class BaseGRUNetHypernet(Net):
         #set the hypernet and the embedding generator
         self.hypernet = HyperNet()
         
-    def forward(self, x, y=None, test=True):
+    def forward(self, x, y=None, global_step=0, test=True):
         #ensure that the network has encoder and decoder attributes
         if self.encoder is None:
             raise Exception("subclass network of BaseGRUNet must define the \"encoder\" attribute")
@@ -163,6 +167,8 @@ class BaseGRUNetHypernet(Net):
         #initialize the hidden state and update gate
         h = self.initHidden(self.h_shape)
         u = self.initHidden(self.h_shape)
+        
+        
         
         #a list used to store intermediate update gate activations
         u_list = []
@@ -181,46 +187,54 @@ class BaseGRUNetHypernet(Net):
             loss_list = []
             ulist_list = []
             
-            
+            x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
+            y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
                 
-            for batch in range(x.size(0)):
-                #initialize the hidden state and update gate
-                h = self.initHidden(self.h_shape)
-                u = self.initHidden(self.h_shape)
+            vqloss, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru, feat_kernels_dec_conv, feat_bias_dec_conv = self.hypernet(x, global_step, test)
                 
-                true_ipt = x[batch].view(1, x.size()[1], x.size()[2], x.size()[3])
-                if y is not None:
-                    true_opt = y[batch].view(1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
-                else:
-                    true_opt = None
-                   
+            # Visualize weights on TB
+#             if global_step<=20:
+#                 for i, name in enumerate(self.hypernet.enc_conv_names):
+#                     self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_conv[i], global_step)
+#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_conv[i], global_step)
+
+#                 for i, name in enumerate(self.hypernet.enc_fc_names):
+#                     self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_fc[i], global_step)
+#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_fc[i], global_step)
+
+#                 for i, name in enumerate(self.hypernet.enc_3dgru_names):
+#                     if i%2==1:
+#                         self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_3dgru[i//2], global_step)
+#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_3dgru[i], global_step)
+
+#                 for i, name in enumerate(self.hypernet.dec_conv_names):
+#                     self.tb_logger.add_histogram(name+'.bias', feat_bias_dec_conv[i], global_step)
+#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_dec_conv[i], global_step)
                 
-                vqloss, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru, feat_kernels_dec_conv, feat_bias_dec_conv = self.hypernet(true_ipt)
         
-                gru_out, update_gate = self.encoder(true_ipt, h, u, 0, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru)
+            gru_out, update_gate = self.encoder(x, h, u, 0, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru)
 
-                h = gru_out
+            h = gru_out
 
-                u = update_gate
-                u_list.append(u)
+            u = update_gate
+            u_list.append(u)
 
-                out = self.decoder(h, feat_kernels_dec_conv, feat_bias_dec_conv)
-                """
-                If test is True and y is None, then the out is the [prediction].
-                If test is True and y is not None, then the out is [prediction, loss].
-                If test is False and y is not None, then the out is loss.
-                """
-                out = self.SoftmaxWithLoss3D(out, y=true_opt, test=test)
-                if not test:
-                    net_loss = net_loss + out + vqloss
-                
-                
-            if test:
-                out.extend(u_list)
-                return out
-                
+            out = self.decoder(h, feat_kernels_dec_conv, feat_bias_dec_conv)
+            """
+            If test is True and y is None, then the out is the [prediction].
+            If test is True and y is not None, then the out is [prediction, loss].
+            If test is False and y is not None, then the out is loss.
+            """
             
-        return net_loss
+            out = self.SoftmaxWithLoss3D(out, y=y, test=test)
+           
+            if test:
+                out[1] += vqloss
+                out.extend(u_list)
+            else:
+                out += vqloss
+                
+        return out
     
     def initHidden(self, h_shape):
         h = torch.zeros(h_shape)
@@ -290,7 +304,7 @@ class HyperNet(nn.Module):
         
         self.encodingnet = ResnetEncoder()
         self.embedding = nn.Embedding(vqvae_dict_size, self.emb_dimension)
-        nn.init.normal_(self.embedding.weight, mean=0, std=0.6)
+        nn.init.normal_(self.embedding.weight, mean=0, std=1.55)
         self.prototype_usage = torch.zeros(vqvae_dict_size).cuda()
 
         if hypernet_nonlinear:
@@ -303,11 +317,11 @@ class HyperNet(nn.Module):
 
         # Dummy values for occ and rgbnet hypernet testing
         
-        weight_variances_conv_enc = [0.0287, 0.0481, 0.044, 0.0416, 0.1336, 0.0340, 0.0294, 0.1020, 0.0294, 0.0294, 0.0294, 0.0294, 0.0883, 0.0294, 0.0294]
-        weight_variances_fc_enc = [0.03466]
-        weight_variances_3dgru_enc = [0.0208, 0.0051, 0.0208, 0.0051, 0.0208, 0.0051]
+        weight_variances_conv_enc = [0.0287/10, 0.0481/10, 0.044/10, 0.0416/10, 0.1336/10, 0.0340/10, 0.0294/10, 0.1020/10, 0.0294/10, 0.0294/10, 0.0294/10, 0.0294/10, 0.0883/10, 0.0294/10, 0.0294/10]
+        weight_variances_fc_enc = [0.03466/10]
+        weight_variances_3dgru_enc = [0.0208/10, 0.0051/10, 0.0208/10, 0.0051/10, 0.0208/10, 0.0051/10]
         
-        weight_variances_conv_dec = [0.00514, 0.00514, 0.00514, 0.00514, 0.00719, 0.01018, 0.02192, 0.0140, 0.01992, 0.0199, 0.0527]
+        weight_variances_conv_dec = [0.00514/10, 0.00514/10, 0.00514/10, 0.00514/10, 0.00719/10, 0.01018/10, 0.02192/10, 0.0140/10, 0.01992/10, 0.0199/10, 0.0527/10]
 
         
         self.kernel_conv_encoderWeights = nn.ParameterList([Parameter(torch.nn.init.normal_(torch.empty(self.emb_dimension, self.total(i)), mean=0, std=(variance*weight_variances_conv_enc[index])/((variance**2-weight_variances_conv_enc[index]**2)**0.5)),requires_grad=True) for index,i in enumerate(self.enc_conv_wts_size)])
@@ -324,7 +338,7 @@ class HyperNet(nn.Module):
 
         print("initalized")
 
-
+    
 
     def total(self,tensor_shape):
         prod = 1
@@ -337,7 +351,7 @@ class HyperNet(nn.Module):
         total = torch.sum(self.prototype_usage)
         probs = self.prototype_usage/total
         # Select 2 good embeds and take mean
-        good_embeds_idxs = torch.where(probs>dynamic_hypernet_probability_thresh)[0]
+        good_embeds_idxs = torch.where(probs>0.2)[0]
         if good_embeds_idxs.shape[0] < 2:
             print("Not enough highly used embedding. Skipping dynamic update.")
             return 
@@ -362,17 +376,20 @@ class HyperNet(nn.Module):
 
         self.prototype_usage *= 0 # clear usage
 
-    def forward(self, rgb):
+    def forward(self, rgb, global_step, test):
         # input: rgb (1, 3, 127, 127)
         loss = 0
+        
+        if not test:
+            if cfg.CONST.dynamic_dict:
+                if (global_step%1000) ==0:
+                    with torch.no_grad():
+                        self.update_embedding_dynamically()
 
         embed = self.encodingnet(rgb)
 
         embed_shape = embed.shape 
 
-        # if hyp.vis_feat_weights:
-        #     summ_writer.summ_histogram("embedding_generated", embed.clone().cpu().data.numpy())    
-        #     summ_writer.summ_histogram("embedding_init", self.embedding.weight.clone().cpu().data.numpy())
 
         distances = (torch.sum(embed**2, dim=1, keepdim=True) + torch.sum(self.embedding.weight**2, dim=1) - 2 * torch.matmul(embed, self.embedding.weight.t()))
 
@@ -380,8 +397,7 @@ class HyperNet(nn.Module):
 
         for idx in encoding_indices.view(-1):
             self.prototype_usage[idx] += 1
-
-        # summ_writer.summ_histogram("embedding_indices_matched", encoding_indices.clone().cpu().data.numpy())    
+ 
         encodings = torch.zeros(encoding_indices.shape[0], vqvae_dict_size, device=embed.device) 
         encodings.scatter_(1, encoding_indices, 1) 
 
@@ -402,8 +418,8 @@ class HyperNet(nn.Module):
             embed = F.leaky_relu(embed)
             embed = self.hidden2(embed)
             embed = F.leaky_relu(embed)
-        # summ_writer.summ_histogram("embedding", embed.clone().cpu().data.numpy())    
-
+       
+        
         
         feat_kernels_enc_conv = [(torch.matmul(embed,self.kernel_conv_encoderWeights[i])).view(self.enc_conv_wts_size[i]) for i in range(len(self.kernel_conv_encoderWeights))]
         feat_bias_enc_conv = self.bias_conv_encoderWeights #[(torch.matmul(embed,self.bias_conv_encoderWeights[i])).view([B]+self.enc_conv_bias_size[i][0]) for i in range(len(self.bias_conv_encoderWeights))]
