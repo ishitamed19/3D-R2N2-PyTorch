@@ -107,29 +107,27 @@ class BaseGRUNet(Net):
 
         #else:
         # since we are training for single view
-        x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
-        y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
-        net_loss = 0
-        for batch in range(x.size(0)):
-            #initialize the hidden state and update gate
-            h = self.initHidden(self.h_shape)
-            u = self.initHidden(self.h_shape)
+        
+        
+        x = x.view(-1, 3, 127, 127)
+        y = y.view(-1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+        
+        curr_batch_size = x.size()[0]
+        #initialize the hidden state and update gate
+        h = self.initHidden(self.h_shape)
+        u = self.initHidden(self.h_shape)
 
-            ipt = x[batch].view(1, 3, 127, 127)
-            opt = y[batch].view(1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+        gru_out, update_gate = self.encoder(x, h, u, 0)
 
-            gru_out, update_gate = self.encoder(ipt, h, u, 0)
+        h = gru_out
 
-            h = gru_out
+        u = update_gate
+        #u_list.append(u)
 
-            u = update_gate
-            #u_list.append(u)
+        out = self.decoder(h)
+        out = self.SoftmaxWithLoss3D(out, y=y, test=False)
 
-            out = self.decoder(h)
-            out = self.SoftmaxWithLoss3D(out, y=opt, test=False)
-            net_loss += out
-
-        return net_loss
+        return out
     
     def initHidden(self, h_shape):
         h = torch.zeros(h_shape)
@@ -228,10 +226,13 @@ class BaseGRUNetHypernet(Net):
 
         #else:
         # since we are training for single view and batch
-        x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
-        y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+        x = x.view(-1, 3, 127, 127)
+        y = y.view(-1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+        
+        curr_batch_size = x.size()[0]
+        
         net_loss = 0
-        for batch in range(cfg.CONST.BATCH_SIZE):
+        for batch in range(curr_batch_size):
             #initialize the hidden state and update gate
             h = self.initHidden(self.h_shape)
             u = self.initHidden(self.h_shape)
@@ -252,7 +253,7 @@ class BaseGRUNetHypernet(Net):
             out = self.SoftmaxWithLoss3D(out, y=opt, test=False)
             net_loss += (out + vqloss)
 
-        return net_loss
+        return (net_loss/curr_batch_size)
     
     def initHidden(self, h_shape):
         h = torch.zeros(h_shape)
