@@ -69,7 +69,7 @@ def train_net():
     val_collate_fn = ShapeNetCollateFn(train=False)
     val_loader = DataLoader(
         dataset=val_dataset,
-        batch_size=cfg.CONST.BATCH_SIZE,
+        batch_size=1,
         shuffle=True,
         num_workers=1,
         collate_fn=val_collate_fn,

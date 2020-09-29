@@ -5,7 +5,7 @@ import scipy.io as sio
 import inspect
 import sklearn.metrics
 from multiprocessing import Queue
-
+import torch
 from torch.utils.data import DataLoader
 
 # Theano & network
@@ -18,7 +18,7 @@ from lib.data_process import make_data_processes, get_while_running
 
 from lib.voxel import evaluate_voxel_prediction, voxel2obj
 
-
+@torch.no_grad()
 def test_net():
     ''' Evaluate the network '''
     # Make result directory and the result file.

@@ -176,7 +176,7 @@ class Solver(object):
         symlink to the latest param so that the training function can easily
         load the latest model'''
 
-        save_path = os.path.join(save_dir, 'checkpoint.%d.pth' % (step))
+        save_path = os.path.join(save_dir, 'checkpoint_latest.pth')
         
         #both states of the network and the optimizer need to be saved
         state_dict = {'net_state': self.net.state_dict()}
@@ -245,52 +245,52 @@ class Solver(object):
     def val_net(self, val_loader=None, global_step=0):
         ''' Validate the network '''
         #st()
-        
-        self.net.eval()
-        
-        val_losses = 0
-        val_num_iter = min(cfg.TRAIN.NUM_VALIDATION_ITERATIONS, len(val_loader))
-        val_loader_iter = iter(val_loader)
+        with torch.no_grad():
+            self.net.eval()
 
-        num_data = val_num_iter
-        num_batch = int(num_data / 1)
+            val_losses = 0
+            val_num_iter = min(cfg.TRAIN.NUM_VALIDATION_ITERATIONS, len(val_loader))
+            val_loader_iter = iter(val_loader)
 
-        # prepare result container
-        results = {'cost': np.zeros(num_batch),
-                   'mAP': np.zeros((num_batch, 1))}
-        # Save results for various thresholds
-        for thresh in cfg.TEST.VOXEL_THRESH:
-            results[str(thresh)] = np.zeros((num_batch, 1, 5))
+            num_data = val_num_iter
+            num_batch = int(num_data / 1)
 
-        
+            # prepare result container
+            results = {'cost': np.zeros(num_batch),
+                       'mAP': np.zeros((num_batch, 1))}
+            # Save results for various thresholds
+            for thresh in cfg.TEST.VOXEL_THRESH:
+                results[str(thresh)] = np.zeros((num_batch, 1, 5))
 
-        # Get all test data
-        batch_idx = 0
-        for i in range(val_num_iter):
-            if batch_idx == num_batch:
-                break
-            batch_img, batch_voxel = val_loader_iter.next()
-            pred, loss, activations = self.test_output(batch_img, batch_voxel)
-            #convert pytorch tensor to numpy array
-            pred = pred.detach().cpu().numpy()
-            loss = loss.detach().cpu().numpy()
-            batch_voxel_np = batch_voxel.cpu().numpy()
-            # Save IoU per thresh
-            j=0
-            for i, thresh in enumerate(cfg.TEST.VOXEL_THRESH):
-                r = evaluate_voxel_prediction(pred[j, ...], batch_voxel_np[j, ...], thresh)
-                results[str(thresh)][batch_idx, j, :] = r
-            # Compute AP
-            precision = sklearn.metrics.average_precision_score(
-                batch_voxel[j, 1].flatten(), pred[j, 1].flatten())
-            results['mAP'][batch_idx, j] = precision
-            # record result for the batch
-            results['cost'][batch_idx] = float(loss)
 
-            batch_idx += 1
 
-        print('Validation loss: %f' % np.mean(results['cost']))
-        print('Validation mAP: %f' % np.mean(results['mAP']))
+            # Get all test data
+            batch_idx = 0
+            for i in range(val_num_iter):
+                if batch_idx == num_batch:
+                    break
+                batch_img, batch_voxel = val_loader_iter.next()
+                pred, loss, activations = self.test_output(batch_img, batch_voxel)
+                #convert pytorch tensor to numpy array
+                pred = pred.detach().cpu().numpy()
+                loss = loss.detach().cpu().numpy()
+                batch_voxel_np = batch_voxel.cpu().numpy()
+                # Save IoU per thresh
+                j=0
+                for i, thresh in enumerate(cfg.TEST.VOXEL_THRESH):
+                    r = evaluate_voxel_prediction(pred[j, ...], batch_voxel_np[j, ...], thresh)
+                    results[str(thresh)][batch_idx, j, :] = r
+                # Compute AP
+                precision = sklearn.metrics.average_precision_score(
+                    batch_voxel[j, 1].flatten(), pred[j, 1].flatten())
+                results['mAP'][batch_idx, j] = precision
+                # record result for the batch
+                results['cost'][batch_idx] = float(loss)
 
-        self.net.tb_logger.add_scalar('Validation loss',np.mean(results['cost']), global_step)
-        self.net.tb_logger.add_scalar('Validation mIOU',np.mean(results['mAP']), global_step)
+                batch_idx += 1
+
+            print('Validation loss: %f' % np.mean(results['cost']))
+            print('Validation mAP: %f' % np.mean(results['mAP']))
+
+            self.net.tb_logger.add_scalar('Validation loss',np.mean(results['cost']), global_step)
+            self.net.tb_logger.add_scalar('Validation mIOU',np.mean(results['mAP']), global_step)

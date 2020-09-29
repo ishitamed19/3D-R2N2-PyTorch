@@ -73,39 +73,63 @@ class BaseGRUNet(Net):
         #initialize the hidden state and update gate
         h = self.initHidden(self.h_shape)
         u = self.initHidden(self.h_shape)
-        
-        # since we are training for single view and batch
-        x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
-        y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
-        
+
         #a list used to store intermediate update gate activations
         u_list = []
-        
+
         """
         x is the input and the size of x is (num_views, batch_size, channels, heights, widths).
         h and u is the hidden state and activation of last time step respectively.
         The following loop computes the forward pass of the whole network. 
         """
-            
-        for time in range(x.size(0)):
-            gru_out, update_gate = self.encoder(x, h, u, time)
+        """
+        If test is True and y is None, then the out is the [prediction].
+        If test is True and y is not None, then the out is [prediction, loss].
+        If test is False and y is not None, then the out is loss.
+        """
+
+        if test:
+            # since we are training for single view and batch
+            x = x.view(1, 3, 127, 127)
+            y = y.view(1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+
+            gru_out, update_gate = self.encoder(x, h, u, 0)
 
             h = gru_out
 
             u = update_gate
             u_list.append(u)
 
-        out = self.decoder(h)
-
-        """
-        If test is True and y is None, then the out is the [prediction].
-        If test is True and y is not None, then the out is [prediction, loss].
-        If test is False and y is not None, then the out is loss.
-        """
-        out = self.SoftmaxWithLoss3D(out, y=y, test=test)
-        if test:
+            out = self.decoder(h)
+            out = self.SoftmaxWithLoss3D(out, y=y, test=True)
             out.extend(u_list)
-        return out
+            return out
+
+        #else:
+        # since we are training for single view
+        x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
+        y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+        net_loss = 0
+        for batch in range(x.size(0)):
+            #initialize the hidden state and update gate
+            h = self.initHidden(self.h_shape)
+            u = self.initHidden(self.h_shape)
+
+            ipt = x[batch].view(1, 3, 127, 127)
+            opt = y[batch].view(1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+
+            gru_out, update_gate = self.encoder(ipt, h, u, 0)
+
+            h = gru_out
+
+            u = update_gate
+            #u_list.append(u)
+
+            out = self.decoder(h)
+            out = self.SoftmaxWithLoss3D(out, y=opt, test=False)
+            net_loss += out
+
+        return net_loss
     
     def initHidden(self, h_shape):
         h = torch.zeros(h_shape)
@@ -167,54 +191,28 @@ class BaseGRUNetHypernet(Net):
         #initialize the hidden state and update gate
         h = self.initHidden(self.h_shape)
         u = self.initHidden(self.h_shape)
-        
-        
-        
+
         #a list used to store intermediate update gate activations
         u_list = []
-        
+
         """
         x is the input and the size of x is (num_views, batch_size, channels, heights, widths).
         h and u is the hidden state and activation of last time step respectively.
         The following loop computes the forward pass of the whole network. 
         """
-        if self.is_x_tensor4:
-            '''x: (batch_size, channels, heights, widths) SINGLE VIEW'''
-            
-            
-            net_loss = 0
-            prob_list = []
-            loss_list = []
-            ulist_list = []
-            
-            x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
-            y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
-                
+        """
+        If test is True and y is None, then the out is the [prediction].
+        If test is True and y is not None, then the out is [prediction, loss].
+        If test is False and y is not None, then the out is loss.
+        """
+
+        if test:
+            # since we are training for single view and batch
+            x = x.view(1, 3, 127, 127)
+            y = y.view(1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+
             vqloss, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru, feat_kernels_dec_conv, feat_bias_dec_conv = self.hypernet(x, global_step, test)
-                
-            # Visualize weights on TB
-#             if global_step<=20:
-#                 self.tb_logger.add_histogram('resnet_embedding', self.hypernet.encodingnet(x), global_step)
-#                 self.tb_logger.add_histogram('vqvae_embedding', self.hypernet.embedding.weight, global_step)
-                
-#                 for i, name in enumerate(self.hypernet.enc_conv_names):
-#                     self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_conv[i], global_step)
-#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_conv[i], global_step)
 
-#                 for i, name in enumerate(self.hypernet.enc_fc_names):
-#                     self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_fc[i], global_step)
-#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_fc[i], global_step)
-
-#                 for i, name in enumerate(self.hypernet.enc_3dgru_names):
-#                     if i%2==1:
-#                         self.tb_logger.add_histogram(name+'.bias', feat_bias_enc_3dgru[i//2], global_step)
-#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_enc_3dgru[i], global_step)
-
-#                 for i, name in enumerate(self.hypernet.dec_conv_names):
-#                     self.tb_logger.add_histogram(name+'.bias', feat_bias_dec_conv[i], global_step)
-#                     self.tb_logger.add_histogram(name+'.weight', feat_kernels_dec_conv[i], global_step)
-                
-        
             gru_out, update_gate = self.encoder(x, h, u, 0, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru)
 
             h = gru_out
@@ -223,21 +221,38 @@ class BaseGRUNetHypernet(Net):
             u_list.append(u)
 
             out = self.decoder(h, feat_kernels_dec_conv, feat_bias_dec_conv)
-            """
-            If test is True and y is None, then the out is the [prediction].
-            If test is True and y is not None, then the out is [prediction, loss].
-            If test is False and y is not None, then the out is loss.
-            """
-            
-            out = self.SoftmaxWithLoss3D(out, y=y, test=test)
-           
-            if test:
-                out[1] += vqloss
-                out.extend(u_list)
-            else:
-                out += vqloss
-                
-        return out
+            out = self.SoftmaxWithLoss3D(out, y=y, test=True)
+            out[1] += vqloss
+            out.extend(u_list)
+            return out
+
+        #else:
+        # since we are training for single view and batch
+        x = x.view(cfg.CONST.BATCH_SIZE, 3, 127, 127)
+        y = y.view(cfg.CONST.BATCH_SIZE, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+        net_loss = 0
+        for batch in range(cfg.CONST.BATCH_SIZE):
+            #initialize the hidden state and update gate
+            h = self.initHidden(self.h_shape)
+            u = self.initHidden(self.h_shape)
+
+            ipt = x[batch].view(1, 3, 127, 127)
+            opt = y[batch].view(1, y.size()[1], y.size()[2], y.size()[3], y.size()[4])
+
+            vqloss, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru, feat_kernels_dec_conv, feat_bias_dec_conv = self.hypernet(ipt, global_step, test, batch)
+
+            gru_out, update_gate = self.encoder(ipt, h, u, 0, feat_kernels_enc_conv, feat_bias_enc_conv, feat_kernels_enc_fc, feat_bias_enc_fc, feat_kernels_enc_3dgru, feat_bias_enc_3dgru)
+
+            h = gru_out
+
+            u = update_gate
+            u_list.append(u)
+
+            out = self.decoder(h, feat_kernels_dec_conv, feat_bias_dec_conv)
+            out = self.SoftmaxWithLoss3D(out, y=opt, test=False)
+            net_loss += (out + vqloss)
+
+        return net_loss
     
     def initHidden(self, h_shape):
         h = torch.zeros(h_shape)
@@ -379,13 +394,13 @@ class HyperNet(nn.Module):
 
         self.prototype_usage *= 0 # clear usage
 
-    def forward(self, rgb, global_step, test):
+    def forward(self, rgb, global_step, test, batch_num=0):
         # input: rgb (1, 3, 127, 127)
         loss = 0
         
         if not test:
             if cfg.CONST.dynamic_dict:
-                if (global_step%1000) ==0:
+                if (global_step%1000)==0 and batch_num==0:
                     with torch.no_grad():
                         self.update_embedding_dynamically()
 
