@@ -220,7 +220,7 @@ class BaseGRUNetHypernet(Net):
 
             out = self.decoder(h, feat_kernels_dec_conv, feat_bias_dec_conv)
             out = self.SoftmaxWithLoss3D(out, y=y, test=True)
-            out[1] += vqloss
+            out[1] += (cfg.CONST.vqloss_lambda * vqloss)
             out.extend(u_list)
             return out
 
@@ -251,7 +251,7 @@ class BaseGRUNetHypernet(Net):
 
             out = self.decoder(h, feat_kernels_dec_conv, feat_bias_dec_conv)
             out = self.SoftmaxWithLoss3D(out, y=opt, test=False)
-            net_loss += (out + vqloss)
+            net_loss += (out + (cfg.CONST.vqloss_lambda * vqloss))
 
         return (net_loss/curr_batch_size)
     

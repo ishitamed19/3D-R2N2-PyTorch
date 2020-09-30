@@ -75,7 +75,7 @@ __C.TRAIN.SIMPLE_BACKGROUND_RATIO = 0.5  # ratio of the simple backgrounded imag
 __C.TRAIN.DEFAULT_LEARNING_RATE = 1e-4
 __C.TRAIN.POLICY = 'adam'  # def: sgd, adam
 # The EasyDict can't use dict with integers as keys
-__C.TRAIN.LEARNING_RATES = {'50000': 1e-5, '150000': 1e-5}
+__C.TRAIN.LEARNING_RATES = {'75000': 5e-5, '125000': 1e-5}
 __C.TRAIN.MOMENTUM = 0.90
 # weight decay or regularization constant. If not set, the loss can diverge
 # after the training almost converged since weight can increase indefinitely
@@ -103,6 +103,7 @@ __C.TEST.VOXEL_THRESH = [0.4]
 
 # HYPERNET PARAMS
 __C.CONST.vqvae_dict_size = 100
+__C.CONST.vqloss_lambda = 100 #1
 __C.CONST.dynamic_hypernet_probability_thresh = 0.2
 __C.CONST.hyptotal_instances = 739  #number of embeddings to create
 __C.CONST.hypernet_nonlinear = True
